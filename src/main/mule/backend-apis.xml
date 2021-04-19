@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	
+	<flow name="schedulerFlow" doc:id="432c4d88-000f-45eb-b64b-655014fab7fe" >
+		<scheduler doc:name="Scheduler" doc:id="487fc2ec-d293-464d-9eca-da8caad814f2" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="1" timeUnit="DAYS"/>
+			</scheduling-strategy>
+		</scheduler>
+		<flow-ref doc:name="Flow Reference" doc:id="9c0a5e8d-8ce8-42fe-a49d-90724fdf2090" name="accessTokenFlow"/>
+	</flow>
+	<flow name="accessTokenFlow" doc:id="bb213c57-c6b7-4aee-8651-1b2a1d22bf0b">
+		<http:request method="POST" doc:name="Generate_Bearer_Access-Token" doc:id="9620af73-8d2c-4de3-bd2d-de70636e9d68" url="https://anypoint.mulesoft.com/accounts/login">
+			<http:body><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+    "username": p('secure::username'),
+    "password": p('secure::password')
+}]]]></http:body>
+		</http:request>
+		<os:store doc:name="Store" doc:id="c3da172f-ae71-46f8-951f-513c122ead7b" key="accessTokenKey" objectStore="Data_Object_store">
+			<os:value ><![CDATA[#[payload.access_token]]]></os:value>
+		</os:store>	
+</flow>
+<flow name="getOrganizationId" doc:id="d037aba3-2203-41aa-b504-dc4cb81cbe3d" >
+		<os:retrieve doc:name="Retrieve" doc:id="8bb3bc61-5df3-4744-bc84-97aab1983d17" key="accessTokenKey" objectStore="Data_Object_store" target="accessToken">
+			<os:default-value ><![CDATA[#["null"]]]></os:default-value>
+		</os:retrieve>
+		<http:request method="GET" doc:name="Fetch_Organization-Id" doc:id="06719778-1e2f-4ab8-a25b-6a76dd285cf0" url="https://anypoint.mulesoft.com/accounts/api/me" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer " ++ vars.accessToken
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="a831d720-4e6d-4d08-bbc8-d05939b444fb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.user.memberOfOrganizations filter $.name == p('account-name')  map
+{
+	"id": $.id
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="727d8d84-7eb5-44a5-8222-a5a211b04e94" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="organizationId" ><![CDATA[%dw 2.0
+output application/json
+---
+payload[0].id]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="7bb66e9a-f2ed-4ebb-94ba-1aac9053ead9" name="getEnvironmentId" />
+	</flow>
+	<flow name="getEnvironmentId" doc:id="32f16f8c-7f70-4aff-8fb6-aba654a56c8d">
+		<http:request method="GET" doc:name="Fetch_Environment-Details" doc:id="236f8f3e-7abf-48de-adf4-254a238c8ebd" url="https://anypoint.mulesoft.com/accounts/api/organizations/{organization-id}/environments">
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer " ++ vars.accessToken
+}]]]></http:headers>
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"organization-id" : vars.organizationId
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="33e82bb2-ccb2-40f8-8199-9f338811bf68">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload.data filter (lower($.name) contains lower(vars.userData.environment default "production")) map
+{
+	"id": $.id,
+	"name": $.name
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="e783322a-b6ea-44d3-a10a-fbcce5e01e49">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="environmentId"><![CDATA[%dw 2.0
+output application/json
+---
+payload[0].id]]></ee:set-variable>
+				<ee:set-variable variableName="environmentName" ><![CDATA[%dw 2.0
+output application/json
+---
+payload[0].name]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="20ec7c3e-d990-41b5-abc8-6b3d0c12a29f" name="getTagsFromExchange" />
+	</flow>
+	<flow name="getTagsFromExchange" doc:id="d3181edd-6b71-4a5c-b94c-8ca5d8d65de7" >
+		<http:request method="GET" doc:name="Fetch API details from exchange" doc:id="324a9c79-9786-4fad-b6ef-157a192aebef" url="https://anypoint.mulesoft.com/exchange/api/v1/assets?organizationId=organizationId&amp;limit=1000">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Bearer " ++ vars.accessToken
+}]]]></http:headers>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"organizationId" : vars.organizationId
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="3c0d91b1-05ca-4ffd-8d80-8a9b12ccab0f" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="exchangeData" ><![CDATA[%dw 2.0
+output application/json
+---
+payload map 
+{
+	"API": ((lower($.name replace (" ") with "-") replace  ("-api") with "") replace ("hybris") with ("ecom")) replace ("-customer-bill-") with ("-bill-"),
+	"tags": $.labels flatMap($.value)
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="b233d0a0-206d-4829-8db4-808b344b939f" name="getDataFromRuntime"/>
+	</flow>
+	<flow name="getDataFromRuntime" doc:id="9d1c5ea6-e9e7-4c0e-889f-21879559fc7f" >
+		<http:request method="GET" doc:name="Fetch API details from runtime (on-premise)" doc:id="29a0476f-134b-4764-b80b-a0ff81ed4599" url="https://anypoint.mulesoft.com/hybrid/api/v1/applications" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"X-ANYPNT-ENV-ID" : vars.environmentId,
+	"Authorization" : "Bearer " ++ vars.accessToken,
+	"X-ANYPNT-ORG-ID" : vars.organizationId
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="e3798f2b-660c-49a6-8312-168a673a1a03" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.data map
+if(lower(vars.userData.environment) == "development")
+{
+	"API": $.name,
+	"ip": $.target.addresses[0].ip	
+}
+else
+{
+	"API": $.name,
+	"ip": $.target.servers.addresses[0].ip[0]	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="5f825785-be8b-4d50-8610-e673983697e5" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="runtimeData" ><![CDATA[%dw 2.0
+output application/json
+---
+payload map 
+{
+	"API": $.API,
+	"url": if($.API contains ("ux")) ("http://" ++ $.ip ++ ":8080/" ++ $.API ++ "/v1/console/") 
+			else if($.API contains ("biz")) ("http://" ++ $.ip ++ ":9091/" ++ $.API ++ "/v1/console/") 
+			else ("http://" ++ $.ip ++ ":9092/" ++ $.API ++ "/v1/console/")
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="531569ac-aae7-417d-af5e-2bceb1285eb7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+import * from dw::core::Arrays
+---
+leftJoin(vars.runtimeData, vars.exchangeData, (runtime) -> runtime.API, (exchange) -> exchange.API) map {
+    ($.l) ,
+    tags: $.r.tags default [],
+    description: if($.l.API contains "sys") ("System") else if ($.l.API contains "biz") ("Process") else ("Experience") 
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="35c69b45-1e71-4148-bed7-373a6dbb4662" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map
+{
+    "API": $.API,
+    "url": $.url,
+    "country": (flatten($.tags) map ((item, index) -> if(p('country') contains(lower(item)))(item) else null)) filter $ != null,
+    "project": (flatten($.tags) map ((item, index) -> if(p('project') contains(lower(item)))(item) else null)) filter $ != null,
+    "TMF": (flatten($.tags) map ((item, index) -> if(lower(item) startsWith "tmf6")(item) else null)) filter $ != null,
+    "cerillion": (flatten($.tags) map ((item, index) -> if(lower(item) contains("cerillion"))(item) else null)) filter $ != null,
+    "liberate": (flatten($.tags) map ((item, index) -> if(lower(item) contains("liberate"))(item) else null)) filter $ != null,
+    "description": $.description
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<os:store doc:name="Store" doc:id="ee3dfee5-31c7-4f4e-8122-9561dafe29bc" key="dataKey" objectStore="Data_Object_store"/>
+	</flow>
+	<sub-flow name="retrieveObjectStoreData" doc:id="e3ad0142-47bd-438c-8dc4-c7e1932bbfeb" >
+		<os:retrieve doc:name="Retrieve" doc:id="7a022fa2-abeb-410e-8cb9-0eaf56658af7" key="dataKey" objectStore="Data_Object_store" target="requiredData" targetValue="#[payload as Array]">
+			<os:default-value><![CDATA[#["Test"]]]></os:default-value>
+		</os:retrieve>
+	</sub-flow>
+	</mule>

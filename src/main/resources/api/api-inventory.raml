@@ -1,0 +1,92 @@
+#%RAML 1.0
+title: API-inventory
+
+types:
+  API-Inventory: !include datatypes/datatype.raml
+
+/getResource:
+  post:
+    description: Filters data based on fields mentioned by user
+    body:
+      application/json:
+        type: API-Inventory
+        examples:
+          output: !include examples/input-example.raml
+    responses:
+      200:
+        description: Success
+        body:
+          application/json:
+            type: API-Inventory[]
+            examples:
+              output: !include examples/output-example.raml
+
+/cerillion:
+  post:
+    description: Filters data based on fields mentioned by user
+    body:
+      application/json:
+        type: API-Inventory
+        examples:
+          output: !include examples/input-cerillion.raml
+    responses:
+      200:
+        description: Success
+        body:
+          application/json:
+            type: API-Inventory[]
+            examples:
+              output: !include examples/output-example.raml
+
+/liberate:
+  post:
+    description: Filters data based on fields mentioned by user
+    body:
+      application/json:
+        type: API-Inventory
+        examples:
+          output: !include examples/input-cerillion.raml
+    responses:
+      200:
+        description: Success
+        body:
+          application/json:
+            type: API-Inventory[]
+            examples:
+              output: !include examples/output-example.raml
+
+/tmf:
+  post:
+    description: Filters data based on fields mentioned by user
+    body:
+      application/json:
+        type: API-Inventory
+        examples:
+          output: !include examples/input-cerillion.raml
+    responses:
+      200:
+        description: Success
+        body:
+          application/json:
+            type: API-Inventory[]
+            examples:
+              output: !include examples/output-tmf.raml
+
+/apiLayer:
+  post:
+      description: Filters data based on API Layer
+      body:
+          application/json:
+              type: API-Inventory
+              examples:
+                  output: !include examples/input-apiLayer.raml
+      responses:
+        200:
+          description: Success
+          body:
+            application/json:
+              type: API-Inventory[]
+              examples:
+                output: !include examples/output-example.raml
+
+          

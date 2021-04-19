@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+	<flow name="logicResourceFlow" doc:id="5375f9f8-d0a3-468f-80f4-c8ed31f45d83" >
+		<ee:transform doc:name="Transform Message" doc:id="0ff009c2-c7fb-4e03-8bd1-4972eac243c3">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="userData"><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<validation:all doc:name="All" doc:id="44190577-11fa-4cb3-8a89-213da064a32b" >
+			<validation:is-true doc:name="Is true" doc:id="1a5019b6-c061-4678-9242-915cfa11c81c" expression="#[p('country') contains  lower(vars.userData.country default &quot;&quot;)]" message='#["Invalid country"]'>
+			</validation:is-true>
+			<validation:is-true doc:name="Is true" doc:id="6562f6cf-829c-4396-a828-7f964ffae232" expression="#[p('project') contains  lower(vars.userData.project default &quot;&quot;)]" message='#["Invalid Project"]'/>
+			<validation:is-true doc:name="Is true" doc:id="4a561ea9-b060-440f-aa33-79ccf7162c3d" expression="#[p('tmf') contains lower(vars.userData.tmf default &quot;&quot;)]" message='#["Invalid  TMF"]'>
+			</validation:is-true>
+		</validation:all>
+		<flow-ref doc:name="Flow Reference" doc:id="b478a7ce-9302-4ecb-955f-9167f80671b7" name="getOrganizationId" />
+		<flow-ref doc:name="Flow Reference" doc:id="652c3560-26f0-4c5b-bac7-1716adcc508f" name="retrieveObjectStoreData"/>
+		<logger level="INFO" doc:name="Logger" doc:id="7363b9b6-2ff1-41f9-b018-2a98ceb5b67e" message="#[vars.userData]" />
+		<choice doc:name="Choice" doc:id="d018fe36-e1d0-48fa-b0bd-2a39bbe34e33" >
+			<when expression="#[!isEmpty(vars.userData.country) and !isEmpty(vars.userData.TMF) and !isEmpty(vars.userData.project)]">
+				<ee:transform doc:name="Transform Message" doc:id="e287e86f-51ab-46af-9bb5-971fc8178879">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+(vars.requiredData map if(($.country contains(lower(vars.userData.country))) and ($.project contains (lower(vars.userData.project))) and ($.TMF contains(lower(vars.userData.TMF))))
+{
+	"API": $.API,
+	"url": $.url,
+	"description": $.description,
+	"country": vars.userData.country,
+	"TMF": vars.userData.TMF,
+	"project": vars.userData.project
+}
+else null) filter $ != null]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<when expression="#[isEmpty(vars.userData.country) and !isEmpty(vars.userData.TMF) and !isEmpty(vars.userData.project)]">
+				<ee:transform doc:name="Transform Message" doc:id="77b1a331-ce1d-4aee-9507-f1ee49aa4807" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(vars.requiredData map if(($.project contains (lower(vars.userData.project))) and ($.TMF contains(lower(vars.userData.TMF))))
+{
+	"API": $.API,
+	"url": $.url,
+	"description": $.description,
+	"country": $.country,
+	"TMF": vars.userData.TMF,
+	"project": vars.userData.project
+}
+else null) filter $ != null]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[!isEmpty(vars.userData.country) and isEmpty(vars.userData.TMF) and !isEmpty(vars.userData.project)]">
+				<ee:transform doc:name="Transform Message" doc:id="9d63146d-260c-4136-a1ec-44555d6f6619" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(vars.requiredData map if(($.country contains(lower(vars.userData.country))) and ($.project contains (lower(vars.userData.project))))
+{
+	"API": $.API,
+	"url": $.url,
+	"description": $.description,
+	"country": vars.userData.country,
+	"TMF": $.TMF,
+	"project": vars.userData.project
+}
+else null) filter $ != null]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[!isEmpty(vars.userData.country) and !isEmpty(vars.userData.TMF) and isEmpty(vars.userData.project)]">
+				<ee:transform doc:name="Transform Message" doc:id="740d6b02-eb43-4bf7-b3b1-e3b3a335833b" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(vars.requiredData map if(($.country contains(lower(vars.userData.country))) and ($.TMF contains(lower(vars.userData.TMF))))
+{
+	"API": $.API,
+	"url": $.url,
+	"description": $.description,
+	"country": vars.userData.country,
+	"TMF": vars.userData.TMF,
+	"project": $.project
+}
+else null) filter $ != null]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[!isEmpty(vars.userData.country) and isEmpty(vars.userData.TMF) and isEmpty(vars.userData.project)]">
+				<ee:transform doc:name="Transform Message" doc:id="3d54cd87-d9e9-4cda-addf-11d916ebb450" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(vars.requiredData map if(($.country contains(lower(vars.userData.country))))
+{
+	"API": $.API,
+	"url": $.url,
+	"description": $.description,
+	"country": vars.userData.country,
+	"TMF": $.TMF,
+	"project": $.project
+}
+else null) filter $ != null]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[isEmpty(vars.userData.country) and !isEmpty(vars.userData.TMF) and isEmpty(vars.userData.project)]">
+				<ee:transform doc:name="Transform Message" doc:id="97ac5556-3704-4046-b666-bb8ac03dcb7f" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(vars.requiredData map if(($.TMF contains(lower(vars.userData.TMF))))
+{
+	"API": $.API,
+	"url": $.url,
+	"description": $.description,
+	"country": $.country,
+	"TMF": vars.userData.TMF,
+	"project": $.project
+}
+else null) filter $ != null]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[isEmpty(vars.userData.country) and isEmpty(vars.userData.TMF) and !isEmpty(vars.userData.project)]">
+				<ee:transform doc:name="Transform Message" doc:id="7b7af228-80f7-4211-8921-a9238ccceba5" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(vars.requiredData map if(($.project contains(lower(vars.userData.project))))
+{
+	"API": $.API,
+	"url": $.url,
+	"description": $.description,
+	"country": $.country,
+	"TMF": $.TMF,
+	"project": vars.userData.project
+}
+else null) filter $ != null]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message" doc:id="8fbf6ccc-9dd2-46b1-9d75-3b70725b34e0" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.requiredData map 
+{
+	"API": $.API,
+	"url": $.url,
+	"description": $.description,
+	"country": $.country,
+	"TMF": $.TMF,
+	"project": $.project
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="8a9fbcbf-8451-4236-8199-b18157cf6199" type="VALIDATION:INVALID_BOOLEAN, VALIDATION:MULTIPLE, EXPRESSION">
+				<ee:transform doc:name="Transform Message" doc:id="f78a2636-1c67-4ac5-b3a1-e05118a5f1a7" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": error.description default "" replace "\n" with " & "
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="cerillionFlow" doc:id="6a81038c-d50f-4ccf-aa82-3cc6e7234e00" >
+		<ee:transform doc:name="Transform Message" doc:id="0baf11e9-c207-4102-81e5-fb5bf7b6318e" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="userData" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="5a08eb42-cda2-4507-b474-16e0809759cc" name="getOrganizationId"/>
+		<flow-ref doc:name="Flow Reference" doc:id="25676b52-d0d2-46ad-9184-904d09b64dfe" name="retrieveObjectStoreData"/>
+		<ee:transform doc:name="Transform Message" doc:id="baee7f58-1afd-434c-83fd-372c31c34496" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(vars.requiredData map if(($.API contains("cerillion")) or ($.cerillion contains ("cerillion")))
+{
+	"API": $.API,
+	"url": $.url,
+	"description": $.description,
+	"country": $.country,
+	"project": $.project,
+	"TMF": $.TMF
+}
+else null) filter $ != null]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="liberateFlow" doc:id="b74efd39-6fc6-4952-83e0-b2a2f64a1299" >
+		<ee:transform doc:name="Transform Message" doc:id="956fca25-bce4-44f0-bd8b-4b6ad7a1a4cc">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="userData"><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="11e0d72f-77cf-4b5b-99de-1b88847d7230" name="getOrganizationId"/>
+		<flow-ref doc:name="Flow Reference" doc:id="49f47d9f-5517-4f0a-9635-ad9842e9586b" name="retrieveObjectStoreData" />
+		<ee:transform doc:name="Transform Message" doc:id="2613f7e2-b444-4335-9d14-8a7d347f4e8e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(vars.requiredData map if(($.API contains("liberate")) or ($.liberate contains ("liberate")))
+{
+	"API": $.API,
+	"url": $.url,
+	"description": $.description,
+	"country": $.country,
+	"project": $.project,
+	"TMF": $.TMF
+}
+else null) filter $ != null]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	
+</flow>
+	<flow name="tmfFlow" doc:id="26798605-d2b2-4338-8bd1-4268f0ad057b" >
+		<ee:transform doc:name="Transform Message" doc:id="1214356f-44a2-47d5-bd60-4f3ea6bbee97">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="userData"><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="6b387c4e-527d-443e-82bb-528340550787" name="getOrganizationId" />
+		<flow-ref doc:name="Flow Reference" doc:id="536eea48-d4de-40f9-bba7-b23cc9f86aa7" name="retrieveObjectStoreData"/>
+		<ee:transform doc:name="Transform Message" doc:id="25283816-56ba-4781-8e16-1b6d86816274" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.requiredData map
+{
+    "API": $.API,
+    "url": $.url,
+    "country": $.country,
+    "project": $.project,
+    "description": $.description,
+    "TMF": $.TMF
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="c7e42b62-0d82-4469-a6ea-d54de8e178b9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map (item,index) ->
+{
+	application: payload.TMF map
+	{
+		"API": item.API,
+		"TMF": upper((item.TMF)[$$]),
+		"url": item.url,
+		"country": item.country,
+    	"project": item.project,
+		"description": item.description
+	}	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="ef56d327-56a4-4c3e-a963-38f3ca627249" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(flatten(payload.application) filter (value,index) -> (value.TMF != null)) orderBy $.TMF]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="filterByAPILayerFlow" doc:id="6b530fd9-847d-4839-9293-f7603929b7f4" >
+		<ee:transform doc:name="Transform Message" doc:id="e2fd145f-a9da-4a63-b215-e32f7993564c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="userData" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="5b6ab06f-8bb4-44e9-8ab5-3e8e0e9e62f3" name="getOrganizationId" />
+		<flow-ref doc:name="Flow Reference" doc:id="613bfac3-f310-4e09-accc-1969bdef32d7" name="retrieveObjectStoreData" />
+		<ee:transform doc:name="Transform Message" doc:id="4cf46d3f-cf6f-4f70-994b-0cec9f4fe832" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.requiredData filter lower($.description) == lower(vars.userData.layer default "system") map
+{
+    "API": $.API,
+    "url": $.url,
+    "country": $.country,
+    "project": $.project,
+    "description": $.description,
+    "TMF": $.TMF
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
