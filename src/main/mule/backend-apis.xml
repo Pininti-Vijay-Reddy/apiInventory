@@ -8,17 +8,18 @@
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
-	
 	<flow name="schedulerFlow" doc:id="432c4d88-000f-45eb-b64b-655014fab7fe" >
 		<scheduler doc:name="Scheduler" doc:id="487fc2ec-d293-464d-9eca-da8caad814f2" >
 			<scheduling-strategy >
-				<fixed-frequency frequency="1" timeUnit="DAYS"/>
+				<fixed-frequency frequency="3610" timeUnit="SECONDS"/>
 			</scheduling-strategy>
 		</scheduler>
 		<flow-ref doc:name="Flow Reference" doc:id="9c0a5e8d-8ce8-42fe-a49d-90724fdf2090" name="accessTokenFlow"/>
-	</flow>
+		<logger level="INFO" doc:name="Logger" doc:id="5fe47216-2e10-4ab5-8a60-12cb3bf0a568" message='#["Scheduler Triggered"]'/>
+	
+</flow>
 	<flow name="accessTokenFlow" doc:id="bb213c57-c6b7-4aee-8651-1b2a1d22bf0b">
-		<http:request method="POST" doc:name="Generate_Bearer_Access-Token" doc:id="9620af73-8d2c-4de3-bd2d-de70636e9d68" url="https://anypoint.mulesoft.com/accounts/login">
+		<http:request method="POST" doc:name="Generate_Bearer_Access-Token" doc:id="9620af73-8d2c-4de3-bd2d-de70636e9d68" config-ref="HTTP_Request_configuration_Generate_Access_Token" path="/accounts/login">
 			<http:body><![CDATA[#[%dw 2.0
 output application/json
 ---
